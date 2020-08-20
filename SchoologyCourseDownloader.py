@@ -4,6 +4,24 @@ Created on Thu Aug 13 14:05:01 2020
 
 @author: Owner PC
 """
+import time
+
+
+def strDir(string):
+    invalidChars = ["\"", "*","<", ">", "?", "\\", "|", "/", ":"]
+    for character in invalidChars:
+        string = string.replace(character, "_")
+    return string
+
+markingTime = time.asctime( time.localtime(time.time()) )
+file = strDir(markingTime) + ".log"
+f = open(file, 'a')
+
+def print(text):
+    sys.stdout.write(text + "\n")
+    f.write(text + "\n")
+
+    
 def getSchoolLink(link):
     slashesCount = 0
     for i, character in enumerate(link, 0):
@@ -19,11 +37,6 @@ def downloadDir(string):
     return string
         
 
-def strDir(string):
-    invalidChars = ["\"", "*","<", ">", "?", "\\", "|", "/", ":"]
-    for character in invalidChars:
-        string = string.replace(character, "_")
-    return string
 
 
 def scroll_shim(passed_in_driver, object):
@@ -62,7 +75,7 @@ def breakingTheTree(elements, parentFolder, downloadDirectory, userCourseLink):
                 #print("Downloading " + fileName)
                 downloadFile(fileLink, downloadDirectory, parentFolder)
    
-    print("Tree Elements: " + str(len(elements[0])) + "\tSub-tree Elements: " + str(len(subtreeElements)))
+    #print("Tree Elements: " + str(len(elements[0])) + "\tSub-tree Elements: " + str(len(subtreeElements)))
     for i, element in enumerate(subtreeElementsNames, 0):        
         if element not in elements[0]:
             #subtreeElements = driver.find_elements(By.CLASS_NAME, "folder-expander")
@@ -90,7 +103,7 @@ def breakingTheTree(elements, parentFolder, downloadDirectory, userCourseLink):
 
 def downloadFile(fileLink, downloadDirectory, parentFolder):
     driver.execute_script("window.open()")
-    driver.switch_to_window(driver.window_handles[1])
+    driver.switch_to.window(driver.window_handles[1])
     driver.get(fileLink)
     try:
         downloadLink = driver.find_element_by_class_name("attachments-file-name").find_element_by_class_name("sExtlink-processed")
@@ -110,7 +123,7 @@ def downloadFile(fileLink, downloadDirectory, parentFolder):
             print(fileName + " already exists")
             pass
         except FileNotFoundError:
-            print("Could not download: " + fileName + " due to invalid file type")
+            print("Error downloading: " + fileName + " due to invalid file type")
             pass
     
     except NoSuchElementException:
@@ -118,7 +131,7 @@ def downloadFile(fileLink, downloadDirectory, parentFolder):
         
 
     driver.close()
-    driver.switch_to_window(driver.window_handles[0])
+    driver.switch_to.window(driver.window_handles[0])
 
     
     
@@ -126,26 +139,35 @@ def downloadFile(fileLink, downloadDirectory, parentFolder):
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 import os
-import time
 from selenium.common.exceptions import ElementNotInteractableException
 from selenium.webdriver.common.action_chains import ActionChains
 from builtins import FileExistsError
 from selenium.common.exceptions import NoSuchElementException
 from tkinter import filedialog
 from tkinter import *
-root = Tk()
+import stdiomask
+
 
 userEmail = str(input("Enter your email for login: "))
-userPassword = str(input("Enter your password for login: "))
-userCourseLink = str(input("Enter the URL for the homepage of the course you wish to \
-                           download course materials for: "))
+sys.stdout.write("Enter your password for login: ")
+userPassword = stdiomask.getpass(prompt = "")
+userCourseLink = str(input("Enter the URL for the homepage of the course you wish to download course materials for: "))
 
 #downloadDirectory = str(input("Enter the directory in which you would like course contents \
 #                              to be downloaded: "))
 print("Select the directory in which you would like course contents to be downloaded")
+root = Tk()
 root.filename =  filedialog.askdirectory()
 downloadDirectory = downloadDir(root.filename + "/")
+root.destroy()
 print ("Your selected download directory: " + downloadDirectory)
+logsDirectory = downloadDirectory + "\schoology-download-logs\\"
+print("Download logs will be stored here: " + logsDirectory)
+try:
+    os.mkdir(logsDirectory)
+except FileExistsError:
+    pass
+
 #downloadDirectory = r"C:\Users\Owner PC\Downloads\\"
 
 # =============================================================================
@@ -169,7 +191,7 @@ profile.set_preference("pdfjs.disabled", True)
 # =============================================================================
 # Deplying the Firefox browser and going to the Schoology website
 # =============================================================================
-driver = webdriver.Firefox(executable_path=r'Downloads/geckodriver/geckodriver.exe', firefox_profile=profile)
+driver = webdriver.Firefox(executable_path=r'C:\Users\Owner PC\Downloads\geckodriver\geckodriver.exe', firefox_profile=profile)
 
 driver.get(getSchoolLink(userCourseLink))
 
@@ -196,3 +218,16 @@ treeElements = []
 fileElements = []
 elements = [treeElements, fileElements]
 breakingTheTree(elements, parentFolder, downloadDirectory, userCourseLink)
+
+
+f.close()
+completeFileName = logsDirectory + file
+os.rename(file, completeFileName)
+
+sys.stdout.write("Complete log can be found at " + logsDirectory + "\n")
+
+f = open(completeFileName, "r")
+data = f.read()
+errors = data.count("Error")
+sys.stdout.write(str(errors) + " errors detected. \nPlease review " + completeFileName + " for more details.")
+f.close()
